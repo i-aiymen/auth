@@ -5,12 +5,13 @@ import 'package:ente_auth/models/code.dart';
 import 'package:ente_auth/ui/components/buttons/button_widget.dart';
 import 'package:ente_auth/ui/components/dialog_widget.dart';
 import 'package:ente_auth/ui/components/models/button_type.dart';
-import 'package:ente_auth/ui/settings/data/import/google_auth_image_import.dart';
+import 'package:ente_auth/ui/settings/data/import/google_auth_import.dart';
 import 'package:ente_auth/ui/settings/data/import/qr_scanner_overlay.dart';
 import 'package:ente_auth/utils/toast_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:logging/logging.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 
@@ -25,11 +26,17 @@ class _QrScannerState extends State<QrScanner> {
   bool isNavigationPerformed = false;
   bool isScannedByImage = false;
 
-  //Scanner Initialization
   MobileScannerController scannerController = MobileScannerController(
     detectionSpeed: DetectionSpeed.normal,
     facing: CameraFacing.back,
   );
+
+  @override
+  void dispose() {
+    scannerController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -69,10 +76,21 @@ class _QrScannerState extends State<QrScanner> {
                           }
                         }
                         HapticFeedback.vibrate();
-                        List<Code> codes =
-                            parseGoogleAuth(capture.barcodes[0].rawValue!);
-                        scannerController.dispose();
-                        Navigator.of(context).pop(codes);
+                        try {
+                          List<Code> codes =
+                              parseGoogleAuth(capture.barcodes[0].rawValue!);
+                          scannerController.dispose();
+                          Navigator.of(context).pop(codes);
+                        } catch (e) {
+                          showToast(context, l10n.parsingErrorText);
+                          Logger("Code parsing error").severe(
+                            "Error while parsing Google Auth QR code",
+                            e,
+                          );
+                          throw Exception(
+                            'Failed to parse Google Auth QR code \n ${e.toString()}',
+                          );
+                        }
                       } else {
                         showToast(context, l10n.invalidQrCodeText);
                         isNavigationPerformed = false;
@@ -80,10 +98,7 @@ class _QrScannerState extends State<QrScanner> {
                     }
                   },
                 ),
-                // Qr code scanner overlay
                 const QRScannerOverlay(),
-
-                // Torch and gallery buttons
                 Positioned(
                   top: 150,
                   left: 0,
@@ -111,8 +126,6 @@ class _QrScannerState extends State<QrScanner> {
                         iconSize: 60,
                         onPressed: () => scannerController.toggleTorch(),
                       ),
-
-                      // Gallery button
                       IconButton(
                         icon: SvgPicture.asset(
                           'assets/scanner-icons/icons/gallery.svg',
@@ -232,8 +245,6 @@ class _QrScannerState extends State<QrScanner> {
                 ),
               ],
             ),
-
-            // Close button
             Positioned(
               left: 25,
               top: 25,
