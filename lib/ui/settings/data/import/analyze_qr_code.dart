@@ -75,10 +75,11 @@ class _QrScannerState extends State<QrScanner> {
                             isScannedByImage = false;
                           }
                         }
-                        HapticFeedback.vibrate();
+
                         try {
                           List<Code> codes =
                               parseGoogleAuth(capture.barcodes[0].rawValue!);
+                          HapticFeedback.vibrate();
                           scannerController.dispose();
                           Navigator.of(context).pop(codes);
                         } catch (e) {
@@ -87,6 +88,7 @@ class _QrScannerState extends State<QrScanner> {
                             "Error while parsing Google Auth QR code",
                             e,
                           );
+                          isNavigationPerformed = false;
                           throw Exception(
                             'Failed to parse Google Auth QR code \n ${e.toString()}',
                           );
